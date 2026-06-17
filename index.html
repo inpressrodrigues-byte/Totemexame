@@ -1,0 +1,118 @@
+<script>
+let html5QrCode = null;
+let ultimoLink = "";
+
+function mostrarLink(link) {
+  ultimoLink = link.trim();
+  document.getElementById("resultado").style.display = "block";
+  document.getElementById("linkLido").innerText = ultimoLink;
+  window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+}
+
+function pareceQRCodeValido(texto) {
+  if (!texto) return false;
+
+  const t = texto.trim();
+
+  const contemUnilabor =
+    t.includes("unilabor") ||
+    t.includes("ConcentWeb") ||
+    t.includes("hlab");
+
+  const pareceSoNumero =
+    /^[0-9.\- ]{6,}$/.test(t);
+
+  return contemUnilabor && !pareceSoNumero;
+}
+
+async function iniciarLeitura() {
+  try {
+    document.getElementById("resultado").style.display = "none";
+
+    if (html5QrCode) {
+      try {
+        await html5QrCode.stop();
+        await html5QrCode.clear();
+      } catch (e) {}
+    }
+
+    html5QrCode = new Html5Qrcode("reader");
+
+    await html5QrCode.start(
+      { facingMode: "environment" },
+      {
+        fps: 10,
+        qrbox: { width: 320, height: 320 }
+      },
+      async (decodedText) => {
+        console.log("LIDO:", decodedText);
+
+        if (!pareceQRCodeValido(decodedText)) {
+          document.getElementById("linkLido").innerText =
+            "Código ignorado: " + decodedText + "\n\nAponte para o QR Code quadrado.";
+          document.getElementById("resultado").style.display = "block";
+          return;
+        }
+
+        await pararLeitura();
+        mostrarLink(decodedText);
+      },
+      () => {}
+    );
+  } catch (e) {
+    alert("Erro ao abrir câmera: " + e);
+    console.error(e);
+  }
+}
+
+async function pararLeitura() {
+  try {
+    if (html5QrCode) {
+      await html5QrCode.stop();
+      await html5QrCode.clear();
+      html5QrCode = null;
+    }
+  } catch (e) {
+    console.log(e);
+  }
+}
+
+function usarManual() {
+  const valor = document.getElementById("manual").value;
+  if (!valor.trim()) {
+    alert("Cole o link primeiro.");
+    return;
+  }
+  mostrarLink(valor);
+}
+
+function abrirExato() {
+  if (!ultimoLink) return;
+  window.location.href = ultimoLink;
+}
+
+function abrir8443() {
+  if (!ultimoLink) return;
+
+  let link = ultimoLink;
+
+  link = link.replace("http://", "https://");
+  link = link.replace("acesso.unilabor.com.br:8080", "acesso.unilabor.com.br:8443");
+  link = link.replace("acesso.unilabor.com.br/", "acesso.unilabor.com.br:8443/");
+
+  window.location.href = link;
+}
+
+function abrirSSO() {
+  if (!ultimoLink) return;
+
+  let link = ultimoLink;
+
+  link = link.replace("http://", "https://");
+  link = link.replace("https://acesso.unilabor.com.br:8080", "https://sso.unilabor.com.br");
+  link = link.replace("https://acesso.unilabor.com.br:8443", "https://sso.unilabor.com.br");
+  link = link.replace("https://acesso.unilabor.com.br", "https://sso.unilabor.com.br");
+
+  window.location.href = link;
+}
+</script>
