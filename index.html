@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Totem Laboratório Anchieta</title>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <style>
+    :root{
+      --verde-escuro:#007154;--verde-vivo:#00A859;--verde-menta:#53C486;--vermelho:#EF1C24;--texto:#23313a;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,Helvetica,sans-serif;min-height:100vh;color:var(--texto);background:linear-gradient(rgba(255,255,255,.80),rgba(255,255,255,.92)),url('https://www.laboratorioanchieta.com.br/wt_admin/uploads/banner-unilabor.jpg');background-size:cover;background-position:center;}
+    .bar{background:linear-gradient(90deg,var(--verde-escuro),var(--verde-vivo));color:#fff;text-align:center;padding:14px;font-weight:800;letter-spacing:.5px}
+    .wrap{max-width:820px;margin:24px auto;padding:16px}.card{background:rgba(255,255,255,.96);border-radius:24px;padding:26px;text-align:center;box-shadow:0 18px 45px rgba(0,0,0,.16);border:1px solid rgba(0,113,84,.16)}
+    .logo{width:132px;height:132px;margin:0 auto 10px;background:#fff;border-radius:18px;display:flex;align-items:center;justify-content:center;border:2px solid rgba(0,113,84,.2);overflow:hidden}.logo img{max-width:112px;max-height:112px;object-fit:contain}
+    h1{margin:8px 0;color:var(--verde-escuro);font-size:30px}p{font-size:17px;line-height:1.4;color:#52606a}.readerBox{max-width:460px;margin:20px auto;border:3px dashed var(--verde-vivo);border-radius:22px;padding:12px;background:#f8fffb}#reader{width:100%;min-height:260px;border-radius:16px;overflow:hidden}
+    button{border:0;border-radius:14px;padding:15px 20px;margin:7px;font-size:16px;font-weight:800;color:#fff;background:var(--verde-escuro);box-shadow:0 8px 20px rgba(0,113,84,.24)}button.sec{background:var(--verde-vivo)}button.red{background:var(--vermelho)}button.dark{background:#1d2d38}
+    input{width:100%;max-width:620px;padding:15px;border-radius:14px;border:2px solid #d8e4df;font-size:16px;margin-top:12px}.resultado{display:none;text-align:left;background:#f4f8f6;border-radius:18px;padding:16px;margin-top:18px;border-left:6px solid var(--verde-vivo)}.link{word-break:break-all;background:#fff;border:1px solid #d8e4df;border-radius:12px;padding:12px;font-size:14px;white-space:pre-wrap}.small{font-size:14px;color:#63717a}.status{margin-top:12px;font-weight:700;color:var(--verde-escuro)}
+  </style>
+</head>
+<body>
+  <div class="bar">RESULTADOS ONLINE · LABORATÓRIO ANCHIETA</div>
+  <div class="wrap"><div class="card">
+    <div class="logo"><img src="https://www.laboratorioanchieta.com.br/wt_admin/uploads/logo.png" alt="Anchieta" onerror="this.style.display='none'"></div>
+    <h1>Totem de Resultados</h1>
+    <p>Aproxime o <b>QR Code quadrado</b> do protocolo na câmera. Evite enquadrar o código de barras.</p>
+    <div class="readerBox"><div id="reader"></div></div>
+    <button id="btnStart">Iniciar leitura</button><button class="red" id="btnStop">Parar</button>
+    <div class="status" id="status">Aguardando início da leitura.</div>
+    <p class="small">Se a câmera não abrir, veja se o site está em HTTPS e se você permitiu o acesso à câmera.</p>
+    <input id="manual" placeholder="Cole aqui o link do QR para testar manualmente">
+    <button class="sec" id="btnManual">Testar link manual</button>
+    <div id="resultado" class="resultado">
+      <h3>Link identificado:</h3><div id="linkLido" class="link"></div>
+      <div style="text-align:center;margin-top:14px">
+        <button id="btnExato">Abrir link exato</button><button class="sec" id="btn8443">Testar :8443</button><button class="dark" id="btnSSO">Testar SSO</button>
+      </div>
+    </div>
+  </div></div>
+<script>
+(function(){
+  let html5QrCode = null;
+  let ultimoLink = '';
+  const statusEl = document.getElementById('status');
+  const resultado = document.getElementById('resultado');
+  const linkLido = document.getElementById('linkLido');
+  function setStatus(t){ statusEl.textContent = t; }
+  function mostrarLink(link){ ultimoLink = String(link || '').trim(); resultado.style.display='block'; linkLido.textContent = ultimoLink; setStatus('QR lido. Escolha como abrir o link.'); window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'}); }
+  function valido(texto){ const t=String(texto||'').trim(); if(!t) return false; if(/^[0-9.\- ]{6,}$/.test(t)) return false; return t.includes('unilabor') || t.includes('ConcentWeb') || t.includes('hlab'); }
+  async function parar(){ try{ if(html5QrCode){ await html5QrCode.stop(); await html5QrCode.clear(); html5QrCode=null; setStatus('Leitura parada.'); } }catch(e){ console.log(e); } }
+  async function iniciar(){
+    try{
+      resultado.style.display='none'; setStatus('Abrindo câmera...'); await parar();
+      if(!window.Html5Qrcode){ alert('Biblioteca de QR não carregou. Recarregue a página.'); setStatus('Erro: biblioteca não carregou.'); return; }
+      html5QrCode = new Html5Qrcode('reader');
+      await html5QrCode.start({facingMode:'environment'}, {fps:10, qrbox:{width:280,height:280}}, async function(decodedText){
+        setStatus('Código lido, validando...');
+        if(!valido(decodedText)){ linkLido.textContent='Ignorado: '+decodedText+'\n\nAponte para o QR Code quadrado.'; resultado.style.display='block'; setStatus('Código de barras/código inválido ignorado.'); return; }
+        await parar(); mostrarLink(decodedText);
+      }, function(){});
+      setStatus('Câmera ativa. Aponte para o QR quadrado.');
+    }catch(e){ console.error(e); alert('Erro ao abrir câmera: '+e); setStatus('Erro ao abrir câmera.'); }
+  }
+  function manual(){ const v=document.getElementById('manual').value.trim(); if(!v){alert('Cole o link primeiro.');return;} mostrarLink(v); }
+  function abrir(url){ if(url) window.location.href=url; }
+  function link8443(){ let l=ultimoLink; l=l.replace('http://','https://'); l=l.replace('acesso.unilabor.com.br:8080','acesso.unilabor.com.br:8443'); if(l.includes('https://acesso.unilabor.com.br/') && !l.includes(':8443')) l=l.replace('https://acesso.unilabor.com.br/','https://acesso.unilabor.com.br:8443/'); return l; }
+  function linkSSO(){ let l=ultimoLink; l=l.replace('http://','https://'); l=l.replace('https://acesso.unilabor.com.br:8080','https://sso.unilabor.com.br'); l=l.replace('https://acesso.unilabor.com.br:8443','https://sso.unilabor.com.br'); l=l.replace('https://acesso.unilabor.com.br','https://sso.unilabor.com.br'); return l; }
+  document.getElementById('btnStart').addEventListener('click', iniciar);
+  document.getElementById('btnStop').addEventListener('click', parar);
+  document.getElementById('btnManual').addEventListener('click', manual);
+  document.getElementById('btnExato').addEventListener('click', function(){abrir(ultimoLink)});
+  document.getElementById('btn8443').addEventListener('click', function(){abrir(link8443())});
+  document.getElementById('btnSSO').addEventListener('click', function(){abrir(linkSSO())});
+})();
+</script>
+</body>
+</html>
